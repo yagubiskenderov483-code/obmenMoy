@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 import time
 import uuid
@@ -40,6 +41,26 @@ MENU_BUTTONS = {
     "/start",
     "/admin",
 }
+
+
+DEALS_FILE = "deals.json"
+
+def save_deals():
+    try:
+        with open(DEALS_FILE, "w") as f:
+            json.dump(deals, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[save error] {e}")
+
+def load_deals():
+    global deals
+    if os.path.exists(DEALS_FILE):
+        try:
+            with open(DEALS_FILE, "r") as f:
+                deals = json.load(f)
+            print(f"[info] Загружено сделок: {len(deals)}")
+        except Exception as e:
+            print(f"[load error] {e}")
 
 # ===== УТИЛИТЫ =====
 def tg(method, data):
@@ -358,6 +379,7 @@ def _create_deal(chat_id, user_id, username, amount, currency):
     }
 
     reset_state(user_id)
+    save_deals()
 
     link = deal_link(deal_id)
     t = (
@@ -462,6 +484,7 @@ def handle_callback(callback):
         deal["participant_id"] = user_id
         deal["participant_name"] = username
         deal["status"] = "in_progress"
+        save_deals()
 
         top_deals.append({
             "user1": f"@{deal['creator_name']}",
@@ -488,6 +511,7 @@ def handle_callback(callback):
             edit(chat_id, msg_id, "<b>❌ Только создатель может отменить сделку!</b>")
             return
         deals[deal_id]["status"] = "cancelled"
+        save_deals()
         edit(chat_id, msg_id, f"<b>❌ Сделка #{deal_id} отменена.</b>")
         return
 
@@ -584,6 +608,7 @@ def main():
     print(f"🚀 Bot @{BOT_USERNAME} запущен")
     print(f"👑 Admin ID: {ADMIN_ID}")
 
+    load_deals()
     top_deals = generate_top()
     tg("deleteWebhook", {})
 

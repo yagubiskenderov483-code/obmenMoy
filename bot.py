@@ -389,6 +389,7 @@ def _create_deal(chat_id, user_id, username, amount, currency):
             break
 
 def _show_deal(chat_id, user_id, username, deal_id):
+    print(f"[debug] deal_id: '{deal_id}' | все сделки: {list(deals.keys())}")
     if deal_id not in deals:
         send(chat_id, "<b>❌ Сделка не найдена!</b>", kb_main())
         return

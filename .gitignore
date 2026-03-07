@@ -1,3 +1,4 @@
 .env
+deals.json
 __pycache__/
 *.pyc

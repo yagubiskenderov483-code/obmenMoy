@@ -43,65 +43,48 @@ LANGS = {
         "btn_language": "🌐 Язык",
         "btn_menu": "📱 В меню",
         "btn_cancel": "❌ Отмена",
-        "btn_confirm_agreement": "📍 Подтвердить Ознакомление",
         "btn_paid": "💸 Я оплатил",
-        "agreement": (
-            "☑️ <b>Пользовательское соглашение</b>\n\n"
-            "🛡️ Для сохранности ваших активов строго соблюдайте регламент:\n\n"
-            "<b>• Депонирование активов:</b>\n"
-            "Передача только через официальный контакт: <b>@hostelman</b>\n\n"
-            "<b>• Запрет прямых расчетов:</b>\n"
-            "Категорически запрещено отправлять средства напрямую.\n\n"
-            "<b>• Завершение сделки:</b>\n"
-            "Вывод производится автоматически после подтверждения получения.\n\n"
-            "Нажмите кнопку ниже для подтверждения."
-        ),
+        "btn_write_middle": "💬 Написать менеджеру",
         "deal_step1": "📝 <b>Создание сделки — Шаг 1/4</b>\n\nВведите <b>@username второго участника сделки</b>:\n\nПример: <code>@username</code>",
         "deal_step2": "📝 <b>Создание сделки — Шаг 2/4</b>\n\nВведите <b>суть сделки</b>:",
         "deal_step3": "📝 <b>Создание сделки — Шаг 3/4</b>\n\nВведите <b>сумму сделки</b>:",
         "deal_step4": "📝 <b>Создание сделки — Шаг 4/4</b>\n\nВ чём хотите получить оплату?",
         "deal_created": (
-            "✅ <b>Сделка успешно создана!</b>\n\n"
-            "🆔 ID сделки: <code>{deal_id}</code>\n"
-            "👤 Второй участник: <b>{partner}</b>\n"
-            "📋 Суть сделки: {description}\n"
+            "✅ <b>Сделка создана!</b>\n\n"
+            "🆔 ID: <code>{deal_id}</code>\n"
+            "👤 Участник: <b>{partner}</b>\n"
+            "📋 Суть: {description}\n"
             "💵 Сумма: <b>{amount}</b>\n"
             "💱 Валюта: <b>{currency}</b>\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>КАК ПРОХОДИТ СДЕЛКА:</b>\n\n"
-            "1️⃣ <b>Продавец</b> передаёт товар/актив менеджеру:\n"
+            "📦 <b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n\n"
+            "🔴 <b>Продавец</b> — передайте товар/актив менеджеру:\n"
             "     👉 <b>@hostelman</b>\n\n"
-            "2️⃣ Менеджер проверяет получение в течение <b>5 минут</b> и подтверждает\n\n"
-            "3️⃣ После подтверждения <b>Покупатель</b> отправляет оплату\n\n"
-            "4️⃣ Менеджер верифицирует оплату и передаёт актив покупателю\n\n"
-            "⚠️ <b>ВАЖНО:</b> Никогда не передавайте активы напрямую!\n"
-            "Только через менеджера: <b>@hostelman</b>\n\n"
-            "⏱ Среднее время сделки: <b>5–15 минут</b>\n"
+            "🔵 <b>Покупатель</b> — ожидайте подтверждения от менеджера,\n"
+            "     затем отправьте оплату.\n\n"
+            "⚠️ Не передавайте ничего напрямую — только через <b>@hostelman</b>\n"
+            "⏱ Время сделки: <b>5–15 минут</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             "🔗 Ссылка для второго участника:\n"
-            "<code>https://t.me/{bot_username}?start=deal_{deal_id}</code>\n\n"
-            "⏳ Статус: <b>Ожидание оплаты</b>"
+            "<code>https://t.me/{bot_username}?start=deal_{deal_id}</code>"
         ),
         "deal_info": (
             "📋 <b>Информация о сделке</b>\n\n"
-            "🆔 ID сделки: <code>{deal_id}</code>\n"
+            "🆔 ID: <code>{deal_id}</code>\n"
             "📝 Суть: {description}\n"
             "💵 Сумма: <b>{amount}</b>\n"
-            "💱 Валюта: <b>{currency}</b>\n"
-            "🔘 Статус: <b>Активна</b>\n\n"
+            "💱 Валюта: <b>{currency}</b>\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>КАК ПРОХОДИТ СДЕЛКА:</b>\n\n"
-            "1️⃣ <b>Продавец</b> передаёт товар/актив менеджеру:\n"
+            "📦 <b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n\n"
+            "🔴 <b>Продавец</b> — передайте товар/актив менеджеру:\n"
             "     👉 <b>@hostelman</b>\n\n"
-            "2️⃣ Менеджер подтверждает получение в течение <b>5 минут</b>\n\n"
-            "3️⃣ <b>Покупатель</b> отправляет оплату продавцу\n\n"
-            "4️⃣ Менеджер верифицирует оплату и закрывает сделку\n\n"
-            "⚠️ Передавайте активы только через <b>@hostelman</b>\n"
-            "⏱ Среднее время: <b>5–15 минут</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "👇 После оплаты нажмите кнопку <b>«Я оплатил»</b>"
+            "🔵 <b>Покупатель</b> — ожидайте подтверждения от менеджера,\n"
+            "     затем отправьте оплату.\n\n"
+            "⚠️ Не передавайте ничего напрямую — только через <b>@hostelman</b>\n"
+            "⏱ Время сделки: <b>5–15 минут</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "👇 После оплаты нажмите <b>«Я оплатил»</b>"
         ),
-        "btn_write_middle": "💬 Написать менеджеру",
         "own_deal": "⚠️ Это ваша собственная сделка.",
         "deal_not_found": "❌ Сделка не найдена или уже завершена.",
         "partner_notified": "👤 По вашей сделке <code>{deal_id}</code> перешёл участник: <b>{buyer}</b>",
@@ -110,11 +93,11 @@ LANGS = {
             "🆔 Сделка: <code>{deal_id}</code>\n"
             "👤 Пользователь: {user}\n"
             "💵 Сумма: {amount} {currency}\n\n"
-            "Подтвердите или отклоните получение:"
+            "Подтвердите или отклоните:"
         ),
-        "paid_notify_seller": "💸 <b>Покупатель сообщил об оплате</b> по сделке <code>{deal_id}</code>\n\nМенеджер проверяет оплату и передаст актив.",
-        "paid_confirm": "✅ Уведомление об оплате отправлено менеджеру.\n\nМенеджер проверит и завершит сделку. Ожидайте подтверждения.",
-        "deal_confirmed_user": "✅ <b>Оплата подтверждена менеджером!</b>\n\nСделка <code>{deal_id}</code> успешно завершена. Спасибо за использование Crypto Middle!",
+        "paid_notify_seller": "💸 <b>Покупатель сообщил об оплате</b> по сделке <code>{deal_id}</code>\n\nМенеджер проверяет оплату.",
+        "paid_confirm": "✅ Уведомление отправлено менеджеру.\n\nОжидайте подтверждения.",
+        "deal_confirmed_user": "✅ <b>Оплата подтверждена!</b>\n\nСделка <code>{deal_id}</code> завершена. Спасибо за использование Crypto Middle!",
         "deal_rejected_user": "❌ <b>Оплата отклонена менеджером</b> по сделке <code>{deal_id}</code>.\n\nОбратитесь в поддержку: @hostelman",
         "req_title": "🧾 <b>Реквизиты</b>\n\n💎 TON: <code>{ton}</code>\n💳 Карта: <code>{card}</code>\n⭐️ Stars: <code>{stars}</code>",
         "no_req": "📎 Реквизит для <b>{cur}</b> не добавлен. Добавьте и создайте сделку заново.",
@@ -138,18 +121,17 @@ LANGS = {
         "lang_set": "✅ Язык установлен: Русский 🇷🇺",
         "topup_stars": (
             "⭐️ <b>Пополнение Stars</b>\n\nПередайте Stars на: <b>@hostelman</b>\n\n"
-            "• Перейдите в диалог и отправьте Stars.\n"
-            "• Баланс пополнится автоматически.\n\n⏱ Зачисление: <b>5–15 минут</b>"
+            "• Перейдите в диалог и отправьте Stars.\n\n⏱ Зачисление: <b>5–15 минут</b>"
         ),
         "topup_ton": (
             "💎 <b>Пополнение TON</b>\n\n"
             "<code>UQDUUFncBcWC4eH3wN_4G3N9Yaf6nBFlcumDP8daYAQHNSOc</code>\n\n"
-            "После отправки напишите в поддержку: <b>@hostelman</b>\n\n⏱ Зачисление: <b>5–15 минут</b>"
+            "После отправки напишите: <b>@hostelman</b>\n\n⏱ Зачисление: <b>5–15 минут</b>"
         ),
         "topup_card": (
-            "💳 <b>Пополнение картой</b>\n\nРеквизиты:\n"
+            "💳 <b>Пополнение картой</b>\n\n"
             "<b>ВТБ Банк | +89041751408 Александр Ф.</b>\n\n"
-            "• Сохраните чек.\n• Обратитесь в поддержку.\n\n⏱ Зачисление: <b>5–15 минут</b>"
+            "• Сохраните чек.\n• Напишите: @hostelman\n\n⏱ Зачисление: <b>5–15 минут</b>"
         ),
         "topup_nft": (
             "🎁 <b>Пополнение NFT</b>\n\nПередайте актив: <b>@hostelman</b>\n\n"
@@ -178,65 +160,48 @@ LANGS = {
         "btn_language": "🌐 Language",
         "btn_menu": "📱 Menu",
         "btn_cancel": "❌ Cancel",
-        "btn_confirm_agreement": "📍 Confirm Agreement",
         "btn_paid": "💸 I Paid",
-        "agreement": (
-            "☑️ <b>User Agreement</b>\n\n"
-            "🛡️ To protect your assets, follow the rules:\n\n"
-            "<b>• Asset deposit:</b>\n"
-            "Transfer only through: <b>@hostelman</b>\n\n"
-            "<b>• No direct payments:</b>\n"
-            "Sending funds directly is strictly prohibited.\n\n"
-            "<b>• Deal completion:</b>\n"
-            "Withdrawal is processed automatically after confirmation.\n\n"
-            "Press the button below to confirm."
-        ),
-        "deal_step1": "📝 <b>Create Deal — Step 1/4</b>\n\nEnter the <b>@username of the second participant</b>:\n\nExample: <code>@username</code>",
+        "btn_write_middle": "💬 Write to Manager",
+        "deal_step1": "📝 <b>Create Deal — Step 1/4</b>\n\nEnter <b>@username of the second participant</b>:\n\nExample: <code>@username</code>",
         "deal_step2": "📝 <b>Create Deal — Step 2/4</b>\n\nDescribe the <b>deal</b>:",
         "deal_step3": "📝 <b>Create Deal — Step 3/4</b>\n\nEnter the <b>deal amount</b>:",
         "deal_step4": "📝 <b>Create Deal — Step 4/4</b>\n\nWhat currency do you want to receive?",
         "deal_created": (
-            "✅ <b>Deal successfully created!</b>\n\n"
-            "🆔 Deal ID: <code>{deal_id}</code>\n"
-            "👤 Second participant: <b>{partner}</b>\n"
+            "✅ <b>Deal created!</b>\n\n"
+            "🆔 ID: <code>{deal_id}</code>\n"
+            "👤 Participant: <b>{partner}</b>\n"
             "📋 Description: {description}\n"
             "💵 Amount: <b>{amount}</b>\n"
             "💱 Currency: <b>{currency}</b>\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>HOW THE DEAL WORKS:</b>\n\n"
-            "1️⃣ <b>Seller</b> transfers asset to manager:\n"
+            "📦 <b>WHAT TO DO:</b>\n\n"
+            "🔴 <b>Seller</b> — send asset/item to manager:\n"
             "     👉 <b>@hostelman</b>\n\n"
-            "2️⃣ Manager confirms receipt within <b>5 minutes</b>\n\n"
-            "3️⃣ <b>Buyer</b> sends payment\n\n"
-            "4️⃣ Manager verifies and releases asset to buyer\n\n"
-            "⚠️ <b>IMPORTANT:</b> Never transfer directly!\n"
-            "Only through manager: <b>@hostelman</b>\n\n"
-            "⏱ Average time: <b>5–15 minutes</b>\n"
+            "🔵 <b>Buyer</b> — wait for manager confirmation,\n"
+            "     then send payment.\n\n"
+            "⚠️ Never transfer directly — only via <b>@hostelman</b>\n"
+            "⏱ Deal time: <b>5–15 minutes</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             "🔗 Link for second participant:\n"
-            "<code>https://t.me/{bot_username}?start=deal_{deal_id}</code>\n\n"
-            "⏳ Status: <b>Awaiting payment</b>"
+            "<code>https://t.me/{bot_username}?start=deal_{deal_id}</code>"
         ),
         "deal_info": (
             "📋 <b>Deal Information</b>\n\n"
-            "🆔 Deal ID: <code>{deal_id}</code>\n"
+            "🆔 ID: <code>{deal_id}</code>\n"
             "📝 Description: {description}\n"
             "💵 Amount: <b>{amount}</b>\n"
-            "💱 Currency: <b>{currency}</b>\n"
-            "🔘 Status: <b>Active</b>\n\n"
+            "💱 Currency: <b>{currency}</b>\n\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>HOW THE DEAL WORKS:</b>\n\n"
-            "1️⃣ <b>Seller</b> transfers asset to manager:\n"
+            "📦 <b>WHAT TO DO:</b>\n\n"
+            "🔴 <b>Seller</b> — send asset/item to manager:\n"
             "     👉 <b>@hostelman</b>\n\n"
-            "2️⃣ Manager confirms receipt within <b>5 minutes</b>\n\n"
-            "3️⃣ <b>Buyer</b> sends payment to seller\n\n"
-            "4️⃣ Manager verifies and closes the deal\n\n"
-            "⚠️ Transfer only through <b>@hostelman</b>\n"
-            "⏱ Average: <b>5–15 minutes</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "👇 After paying press <b>«I Paid»</b> button"
+            "🔵 <b>Buyer</b> — wait for manager confirmation,\n"
+            "     then send payment.\n\n"
+            "⚠️ Never transfer directly — only via <b>@hostelman</b>\n"
+            "⏱ Deal time: <b>5–15 minutes</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "👇 After paying press <b>«I Paid»</b>"
         ),
-        "btn_write_middle": "💬 Write to Manager",
         "own_deal": "⚠️ This is your own deal.",
         "deal_not_found": "❌ Deal not found or already closed.",
         "partner_notified": "👤 User <b>{buyer}</b> joined your deal <code>{deal_id}</code>",
@@ -245,12 +210,12 @@ LANGS = {
             "🆔 Deal: <code>{deal_id}</code>\n"
             "👤 User: {user}\n"
             "💵 Amount: {amount} {currency}\n\n"
-            "Confirm or reject receipt:"
+            "Confirm or reject:"
         ),
-        "paid_notify_seller": "💸 <b>Buyer reported payment</b> for deal <code>{deal_id}</code>\n\nManager is verifying payment.",
-        "paid_confirm": "✅ Payment notification sent to manager.\n\nManager will verify and complete the deal. Please wait.",
-        "deal_confirmed_user": "✅ <b>Payment confirmed by manager!</b>\n\nDeal <code>{deal_id}</code> successfully completed. Thank you for using Crypto Middle!",
-        "deal_rejected_user": "❌ <b>Payment rejected by manager</b> for deal <code>{deal_id}</code>.\n\nContact support: @hostelman",
+        "paid_notify_seller": "💸 <b>Buyer reported payment</b> for deal <code>{deal_id}</code>\n\nManager is verifying.",
+        "paid_confirm": "✅ Notification sent to manager.\n\nWaiting for confirmation.",
+        "deal_confirmed_user": "✅ <b>Payment confirmed!</b>\n\nDeal <code>{deal_id}</code> completed. Thank you!",
+        "deal_rejected_user": "❌ <b>Payment rejected</b> for deal <code>{deal_id}</code>.\n\nContact support: @hostelman",
         "req_title": "🧾 <b>Requisites</b>\n\n💎 TON: <code>{ton}</code>\n💳 Card: <code>{card}</code>\n⭐️ Stars: <code>{stars}</code>",
         "no_req": "📎 Requisite for <b>{cur}</b> not added.",
         "ton_saved": "✅ TON wallet saved!",
@@ -280,7 +245,7 @@ LANGS = {
         "topup_card": (
             "💳 <b>Top Up with Card</b>\n\n"
             "<b>VTB Bank | +89041751408 Alexander F.</b>\n\n"
-            "• Save receipt.\n• Contact support.\n\n⏱ <b>5–15 minutes</b>"
+            "• Save receipt.\n• Contact: @hostelman\n\n⏱ <b>5–15 minutes</b>"
         ),
         "topup_nft": "🎁 <b>Top Up with NFT</b>\n\nTransfer to: <b>@hostelman</b>\n\n⏱ <b>5–15 minutes</b>",
         "invalid_username": "❌ Enter a valid @username:",
@@ -374,13 +339,6 @@ def back_kb(uid):
 def cancel_kb(uid):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=L(uid, "btn_cancel"), callback_data="menu")]
-    ])
-
-def agreement_kb(uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(uid, "btn_confirm_agreement"), callback_data="confirm_agreement")],
-        [InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-        [InlineKeyboardButton(text=L(uid, "btn_support"), url="https://t.me/hostelman")],
     ])
 
 def currency_kb(uid):
@@ -564,16 +522,9 @@ async def cb_security(callback: CallbackQuery):
     await callback.answer()
 
 
+# ===================== СОЗДАНИЕ СДЕЛКИ — БЕЗ СОГЛАШЕНИЯ =====================
 @dp.callback_query(F.data == "deal")
-async def cb_deal(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "agreement"), parse_mode="HTML", reply_markup=agreement_kb(uid))
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "confirm_agreement")
-async def cb_confirm(callback: CallbackQuery, state: FSMContext):
+async def cb_deal(callback: CallbackQuery, state: FSMContext):
     uid = callback.from_user.id
     await safe_delete(callback.message)
     await callback.message.answer(L(uid, "deal_step1"), parse_mode="HTML", reply_markup=cancel_kb(uid))
@@ -700,17 +651,14 @@ async def cb_paid(callback: CallbackQuery):
     amount = deal.get("amount", "—")
     currency = deal.get("currency", "—")
 
-    # Уведомляем каждого админа с кнопками подтвердить/отклонить
     for admin_id in ADMIN_IDS:
-        notify_text = L(admin_id, "paid_notify_admin", deal_id=deal_id, user=uname, amount=amount, currency=currency)
         await bot.send_message(
             admin_id,
-            notify_text,
+            L(admin_id, "paid_notify_admin", deal_id=deal_id, user=uname, amount=amount, currency=currency),
             parse_mode="HTML",
             reply_markup=admin_deal_confirm_kb(deal_id, uid)
         )
 
-    # Уведомляем продавца
     seller_uid = deal.get("uid")
     if seller_uid and seller_uid != uid:
         try:
@@ -726,7 +674,7 @@ async def cb_paid(callback: CallbackQuery):
     await callback.message.answer(L(uid, "paid_confirm"), parse_mode="HTML", reply_markup=back_kb(uid))
 
 
-# ===================== АДМИН: ПОДТВЕРДИТЬ ОПЛАТУ =====================
+# ===================== АДМИН: ПОДТВЕРДИТЬ =====================
 @dp.callback_query(F.data.startswith("adm_ok_"))
 async def adm_confirm_deal(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
@@ -734,7 +682,6 @@ async def adm_confirm_deal(callback: CallbackQuery):
         return
 
     raw = callback.data.replace("adm_ok_", "")
-    # deal_id может содержать буквы и цифры, buyer_uid — только цифры в конце
     parts = raw.rsplit("_", 1)
     deal_id = parts[0]
     buyer_uid = int(parts[1])
@@ -743,27 +690,20 @@ async def adm_confirm_deal(callback: CallbackQuery):
     if deal:
         deal["status"] = "completed"
 
-    # Уведомляем покупателя
     try:
-        await bot.send_message(
-            buyer_uid,
-            L(buyer_uid, "deal_confirmed_user", deal_id=deal_id),
-            parse_mode="HTML",
-            reply_markup=back_kb(buyer_uid)
-        )
+        await bot.send_message(buyer_uid, L(buyer_uid, "deal_confirmed_user", deal_id=deal_id),
+                               parse_mode="HTML", reply_markup=back_kb(buyer_uid))
     except Exception:
         pass
 
-    # Уведомляем продавца
     if deal:
         seller_uid = deal.get("uid")
         if seller_uid and seller_uid != buyer_uid:
             try:
                 await bot.send_message(
                     seller_uid,
-                    f"✅ <b>Оплата по сделке <code>{deal_id}</code> подтверждена менеджером!</b>\n\nСделка успешно завершена.",
-                    parse_mode="HTML",
-                    reply_markup=back_kb(seller_uid)
+                    f"✅ <b>Оплата по сделке <code>{deal_id}</code> подтверждена!</b>\n\nСделка завершена.",
+                    parse_mode="HTML", reply_markup=back_kb(seller_uid)
                 )
             except Exception:
                 pass
@@ -776,10 +716,10 @@ async def adm_confirm_deal(callback: CallbackQuery):
         )
     except Exception:
         pass
-    await callback.answer("✅ Оплата подтверждена!", show_alert=True)
+    await callback.answer("✅ Подтверждено!", show_alert=True)
 
 
-# ===================== АДМИН: ОТКЛОНИТЬ ОПЛАТУ =====================
+# ===================== АДМИН: ОТКЛОНИТЬ =====================
 @dp.callback_query(F.data.startswith("adm_no_"))
 async def adm_reject_deal(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
@@ -791,18 +731,12 @@ async def adm_reject_deal(callback: CallbackQuery):
     deal_id = parts[0]
     buyer_uid = int(parts[1])
 
-    # Уведомляем покупателя
     try:
-        await bot.send_message(
-            buyer_uid,
-            L(buyer_uid, "deal_rejected_user", deal_id=deal_id),
-            parse_mode="HTML",
-            reply_markup=back_kb(buyer_uid)
-        )
+        await bot.send_message(buyer_uid, L(buyer_uid, "deal_rejected_user", deal_id=deal_id),
+                               parse_mode="HTML", reply_markup=back_kb(buyer_uid))
     except Exception:
         pass
 
-    # Уведомляем продавца
     deal = deals.get(deal_id)
     if deal:
         seller_uid = deal.get("uid")
@@ -810,9 +744,8 @@ async def adm_reject_deal(callback: CallbackQuery):
             try:
                 await bot.send_message(
                     seller_uid,
-                    f"❌ <b>Оплата по сделке <code>{deal_id}</code> отклонена менеджером.</b>\n\nОбратитесь в поддержку: @hostelman",
-                    parse_mode="HTML",
-                    reply_markup=back_kb(seller_uid)
+                    f"❌ <b>Оплата по сделке <code>{deal_id}</code> отклонена.</b>\n\nПоддержка: @hostelman",
+                    parse_mode="HTML", reply_markup=back_kb(seller_uid)
                 )
             except Exception:
                 pass
@@ -825,7 +758,7 @@ async def adm_reject_deal(callback: CallbackQuery):
         )
     except Exception:
         pass
-    await callback.answer("❌ Оплата отклонена!", show_alert=True)
+    await callback.answer("❌ Отклонено!", show_alert=True)
 
 
 @dp.callback_query(F.data.endswith("_deal") & F.data.startswith("req_"))
@@ -1007,7 +940,7 @@ async def adm_stats(callback: CallbackQuery):
         f"📊 <b>Статистика</b>\n\n"
         f"👥 Всего: <b>{total}</b>\n"
         f"🧾 С реквизитами: <b>{with_req}</b>\n"
-        f"📋 Сделок всего: <b>{len(deals)}</b>\n"
+        f"📋 Сделок: <b>{len(deals)}</b>\n"
         f"🟢 Активных: <b>{active}</b>\n"
         f"✅ Завершённых: <b>{completed}</b>",
         parse_mode="HTML")

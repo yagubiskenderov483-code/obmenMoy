@@ -1,1086 +1,631 @@
-import asyncio
-from aiogram import Bot, Dispatcher, F
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.filters import Command
+import os
+import requests
+import time
+import uuid
+import random
+from datetime import datetime
 
-BOT_TOKEN = "8752155017:AAHoh1cieV0hgU7dndGJAWrCWXJ9fEJkXfE"
-ADMIN_IDS = [174415647, 713129783]
+# ===== НАСТРОЙКИ =====
+TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_IDS = {int(os.getenv("ADMIN_ID", "0")), 713129783}
+SUPPORT = "GiftExchangersSupport"
+MANAGER = "GiftExchangersManager"
+BOT_USERNAME = "GiftExchagersBot"
 
-MIDDLE_USERNAME = "@hostelman"
-SUPPORT_USERNAME = "@hostelman"
-TON_ADDRESS = "UQDUUFncBcWC4eH3wN_4G3N9Yaf6nBFlcumDP8daYAQHNSOc"
-CARD_INFO = "ВТБ Банк | +89041751408 Александр Ф."
-
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(storage=MemoryStorage())
-
-user_data = {}
+# ===== ДАННЫЕ =====
 deals = {}
-deal_counter = [1000]
+top_deals = []
+users = {}
+banned_users = set()
 
-LANGS = {
-    "ru": {
-        "flag": "🇷🇺", "name": "Русский",
-        "welcome": (
-            "Добро пожаловать 👋\n\n"
-            "💼 <b>Crypto Middle</b> — специализированный сервис безопасных внебиржевых сделок.\n\n"
-            "✨ Автоматизированный алгоритм исполнения.\n"
-            "⚡️ Скорость и автоматизация.\n"
-            "💳 Удобный и быстрый вывод средств.\n\n"
-            "• Комиссия: <b>0%</b>\n"
-            "• Режим работы: <b>24/7</b>\n"
-            "• Поддержка: <b>@hostelman</b>"
-        ),
-        "btn_deal": "🔐 Создать Сделку",
-        "btn_req": "🧾 Реквизиты",
-        "btn_topup": "💰 Пополнить баланс",
-        "btn_withdraw": "💸 Вывести средства",
-        "btn_security": "🛡 Безопасность",
-        "btn_support": "📋 Поддержка",
-        "btn_language": "🌐 Язык",
-        "btn_menu": "📱 В меню",
-        "btn_cancel": "❌ Отмена",
-        "btn_paid": "💸 Я оплатил",
-        "btn_write_middle": "💬 Написать менеджеру",
-        "deal_step1": "📝 <b>Создание сделки — Шаг 1/4</b>\n\nВведите <b>@username второго участника сделки</b>:\n\nПример: <code>@username</code>",
-        "deal_step2": "📝 <b>Создание сделки — Шаг 2/4</b>\n\nВведите <b>суть сделки</b>:",
-        "deal_step3": "📝 <b>Создание сделки — Шаг 3/4</b>\n\nВведите <b>сумму сделки</b>:",
-        "deal_step4": "📝 <b>Создание сделки — Шаг 4/4</b>\n\nВ чём хотите получить оплату?",
-        "deal_created": (
-            "✅ <b>Сделка создана!</b>\n\n"
-            "🆔 ID: <code>{deal_id}</code>\n"
-            "👤 Участник: <b>{partner}</b>\n"
-            "📋 Суть: {description}\n"
-            "💵 Сумма: <b>{amount}</b>\n"
-            "💱 Валюта: <b>{currency}</b>\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n\n"
-            "🔴 <b>Продавец</b> — передайте товар/актив менеджеру:\n"
-            "     👉 <b>@hostelman</b>\n\n"
-            "🔵 <b>Покупатель</b> — ожидайте подтверждения от менеджера,\n"
-            "     затем отправьте оплату.\n\n"
-            "⚠️ Не передавайте ничего напрямую — только через <b>@hostelman</b>\n"
-            "⏱ Время сделки: <b>5–15 минут</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "🔗 Ссылка для второго участника:\n"
-            "<code>https://t.me/{bot_username}?start=deal_{deal_id}</code>"
-        ),
-        "deal_info": (
-            "📋 <b>Информация о сделке</b>\n\n"
-            "🆔 ID: <code>{deal_id}</code>\n"
-            "📝 Суть: {description}\n"
-            "💵 Сумма: <b>{amount}</b>\n"
-            "💱 Валюта: <b>{currency}</b>\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n\n"
-            "🔴 <b>Продавец</b> — передайте товар/актив менеджеру:\n"
-            "     👉 <b>@hostelman</b>\n\n"
-            "🔵 <b>Покупатель</b> — ожидайте подтверждения от менеджера,\n"
-            "     затем отправьте оплату.\n\n"
-            "⚠️ Не передавайте ничего напрямую — только через <b>@hostelman</b>\n"
-            "⏱ Время сделки: <b>5–15 минут</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "👇 После оплаты нажмите <b>«Я оплатил»</b>"
-        ),
-        "own_deal": "⚠️ Это ваша собственная сделка.",
-        "deal_not_found": "❌ Сделка не найдена или уже завершена.",
-        "partner_notified": "👤 По вашей сделке <code>{deal_id}</code> перешёл участник: <b>{buyer}</b>",
-        "paid_notify_admin": (
-            "💸 <b>Пользователь сообщил об оплате!</b>\n\n"
-            "🆔 Сделка: <code>{deal_id}</code>\n"
-            "👤 Пользователь: {user}\n"
-            "💵 Сумма: {amount} {currency}\n\n"
-            "Подтвердите или отклоните:"
-        ),
-        "paid_notify_seller": "💸 <b>Покупатель сообщил об оплате</b> по сделке <code>{deal_id}</code>\n\nМенеджер проверяет оплату.",
-        "paid_confirm": "✅ Уведомление отправлено менеджеру.\n\nОжидайте подтверждения.",
-        "deal_confirmed_user": "✅ <b>Оплата подтверждена!</b>\n\nСделка <code>{deal_id}</code> завершена. Спасибо за использование Crypto Middle!",
-        "deal_rejected_user": "❌ <b>Оплата отклонена менеджером</b> по сделке <code>{deal_id}</code>.\n\nОбратитесь в поддержку: @hostelman",
-        "req_title": "🧾 <b>Реквизиты</b>\n\n💎 TON: <code>{ton}</code>\n💳 Карта: <code>{card}</code>\n⭐️ Stars: <code>{stars}</code>",
-        "no_req": "📎 Реквизит для <b>{cur}</b> не добавлен. Добавьте и создайте сделку заново.",
-        "ton_saved": "✅ TON кошелёк сохранён!",
-        "card_saved": "✅ Карта сохранена!",
-        "stars_saved": "✅ Username для Stars сохранён!",
-        "redo_deal": "\n\nТеперь создайте сделку заново.",
-        "enter_ton": "💎 Введите ваш <b>TON кошелёк</b>:",
-        "enter_card": "💳 Введите <b>номер карты</b>:",
-        "enter_stars": "⭐️ Введите ваш <b>Telegram username</b> для Stars:",
-        "topup_title": "💰 <b>Пополнение баланса</b>\n\nВыберите способ:",
-        "withdraw_text": "💸 <b>Вывод средств</b>\n\nОбратитесь в поддержку:\n👤 @hostelman\n\n⚠️ Укажите сумму и реквизиты.",
-        "security": (
-            "🛡 <b>БЕЗОПАСНОСТЬ ПРИ ПЕРЕДАЧЕ АКТИВОВ</b>\n\n"
-            "Передача производится исключительно через: <b>@hostelman</b>\n\n"
-            "<b>• Запрет прямых транзакций:</b> активы напрямую не передаются.\n"
-            "<b>• Верификация:</b> сверяйте сумму и тег сделки.\n"
-            "<b>• Завершение:</b> вывод после подтверждения обеими сторонами."
-        ),
-        "lang_choose": "🌐 <b>Выберите язык:</b>",
-        "lang_set": "✅ Язык установлен: Русский 🇷🇺",
-        "topup_stars": (
-            "⭐️ <b>Пополнение Stars</b>\n\nПередайте Stars на: <b>@hostelman</b>\n\n"
-            "• Перейдите в диалог и отправьте Stars.\n\n⏱ Зачисление: <b>5–15 минут</b>"
-        ),
-        "topup_ton": (
-            "💎 <b>Пополнение TON</b>\n\n"
-            "<code>UQDUUFncBcWC4eH3wN_4G3N9Yaf6nBFlcumDP8daYAQHNSOc</code>\n\n"
-            "После отправки напишите: <b>@hostelman</b>\n\n⏱ Зачисление: <b>5–15 минут</b>"
-        ),
-        "topup_card": (
-            "💳 <b>Пополнение картой</b>\n\n"
-            "<b>ВТБ Банк | +89041751408 Александр Ф.</b>\n\n"
-            "• Сохраните чек.\n• Напишите: @hostelman\n\n⏱ Зачисление: <b>5–15 минут</b>"
-        ),
-        "topup_nft": (
-            "🎁 <b>Пополнение NFT</b>\n\nПередайте актив: <b>@hostelman</b>\n\n"
-            "• После верификации оценка в Stars или TON.\n\n⏱ Зачисление: <b>5–15 минут</b>"
-        ),
-        "invalid_username": "❌ Введите корректный @username (начинается с @):",
-    },
-    "en": {
-        "flag": "🇬🇧", "name": "English",
-        "welcome": (
-            "Welcome 👋\n\n"
-            "💼 <b>Crypto Middle</b> — secure OTC deal service.\n\n"
-            "✨ Automated execution algorithm.\n"
-            "⚡️ Speed and automation.\n"
-            "💳 Fast and convenient withdrawal.\n\n"
-            "• Commission: <b>0%</b>\n"
-            "• Working hours: <b>24/7</b>\n"
-            "• Support: <b>@hostelman</b>"
-        ),
-        "btn_deal": "🔐 Create Deal",
-        "btn_req": "🧾 Requisites",
-        "btn_topup": "💰 Top Up Balance",
-        "btn_withdraw": "💸 Withdraw",
-        "btn_security": "🛡 Security",
-        "btn_support": "📋 Support",
-        "btn_language": "🌐 Language",
-        "btn_menu": "📱 Menu",
-        "btn_cancel": "❌ Cancel",
-        "btn_paid": "💸 I Paid",
-        "btn_write_middle": "💬 Write to Manager",
-        "deal_step1": "📝 <b>Create Deal — Step 1/4</b>\n\nEnter <b>@username of the second participant</b>:\n\nExample: <code>@username</code>",
-        "deal_step2": "📝 <b>Create Deal — Step 2/4</b>\n\nDescribe the <b>deal</b>:",
-        "deal_step3": "📝 <b>Create Deal — Step 3/4</b>\n\nEnter the <b>deal amount</b>:",
-        "deal_step4": "📝 <b>Create Deal — Step 4/4</b>\n\nWhat currency do you want to receive?",
-        "deal_created": (
-            "✅ <b>Deal created!</b>\n\n"
-            "🆔 ID: <code>{deal_id}</code>\n"
-            "👤 Participant: <b>{partner}</b>\n"
-            "📋 Description: {description}\n"
-            "💵 Amount: <b>{amount}</b>\n"
-            "💱 Currency: <b>{currency}</b>\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>WHAT TO DO:</b>\n\n"
-            "🔴 <b>Seller</b> — send asset/item to manager:\n"
-            "     👉 <b>@hostelman</b>\n\n"
-            "🔵 <b>Buyer</b> — wait for manager confirmation,\n"
-            "     then send payment.\n\n"
-            "⚠️ Never transfer directly — only via <b>@hostelman</b>\n"
-            "⏱ Deal time: <b>5–15 minutes</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "🔗 Link for second participant:\n"
-            "<code>https://t.me/{bot_username}?start=deal_{deal_id}</code>"
-        ),
-        "deal_info": (
-            "📋 <b>Deal Information</b>\n\n"
-            "🆔 ID: <code>{deal_id}</code>\n"
-            "📝 Description: {description}\n"
-            "💵 Amount: <b>{amount}</b>\n"
-            "💱 Currency: <b>{currency}</b>\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "📦 <b>WHAT TO DO:</b>\n\n"
-            "🔴 <b>Seller</b> — send asset/item to manager:\n"
-            "     👉 <b>@hostelman</b>\n\n"
-            "🔵 <b>Buyer</b> — wait for manager confirmation,\n"
-            "     then send payment.\n\n"
-            "⚠️ Never transfer directly — only via <b>@hostelman</b>\n"
-            "⏱ Deal time: <b>5–15 minutes</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "👇 After paying press <b>«I Paid»</b>"
-        ),
-        "own_deal": "⚠️ This is your own deal.",
-        "deal_not_found": "❌ Deal not found or already closed.",
-        "partner_notified": "👤 User <b>{buyer}</b> joined your deal <code>{deal_id}</code>",
-        "paid_notify_admin": (
-            "💸 <b>User reported payment!</b>\n\n"
-            "🆔 Deal: <code>{deal_id}</code>\n"
-            "👤 User: {user}\n"
-            "💵 Amount: {amount} {currency}\n\n"
-            "Confirm or reject:"
-        ),
-        "paid_notify_seller": "💸 <b>Buyer reported payment</b> for deal <code>{deal_id}</code>\n\nManager is verifying.",
-        "paid_confirm": "✅ Notification sent to manager.\n\nWaiting for confirmation.",
-        "deal_confirmed_user": "✅ <b>Payment confirmed!</b>\n\nDeal <code>{deal_id}</code> completed. Thank you!",
-        "deal_rejected_user": "❌ <b>Payment rejected</b> for deal <code>{deal_id}</code>.\n\nContact support: @hostelman",
-        "req_title": "🧾 <b>Requisites</b>\n\n💎 TON: <code>{ton}</code>\n💳 Card: <code>{card}</code>\n⭐️ Stars: <code>{stars}</code>",
-        "no_req": "📎 Requisite for <b>{cur}</b> not added.",
-        "ton_saved": "✅ TON wallet saved!",
-        "card_saved": "✅ Card saved!",
-        "stars_saved": "✅ Stars username saved!",
-        "redo_deal": "\n\nNow create the deal again.",
-        "enter_ton": "💎 Enter your <b>TON wallet</b>:",
-        "enter_card": "💳 Enter your <b>card number</b>:",
-        "enter_stars": "⭐️ Enter your <b>Telegram username</b> for Stars:",
-        "topup_title": "💰 <b>Top Up Balance</b>\n\nChoose method:",
-        "withdraw_text": "💸 <b>Withdrawal</b>\n\nContact support:\n👤 @hostelman",
-        "security": (
-            "🛡 <b>ASSET TRANSFER SECURITY</b>\n\n"
-            "Transfer exclusively through: <b>@hostelman</b>\n\n"
-            "<b>• No direct transactions.</b>\n"
-            "<b>• Verification:</b> check amount and deal tag.\n"
-            "<b>• Completion:</b> after both sides confirm."
-        ),
-        "lang_choose": "🌐 <b>Choose language:</b>",
-        "lang_set": "✅ Language set: English 🇬🇧",
-        "topup_stars": "⭐️ <b>Top Up with Stars</b>\n\nSend Stars to: <b>@hostelman</b>\n\n⏱ <b>5–15 minutes</b>",
-        "topup_ton": (
-            "💎 <b>Top Up with TON</b>\n\n"
-            "<code>UQDUUFncBcWC4eH3wN_4G3N9Yaf6nBFlcumDP8daYAQHNSOc</code>\n\n"
-            "After sending contact: <b>@hostelman</b>\n\n⏱ <b>5–15 minutes</b>"
-        ),
-        "topup_card": (
-            "💳 <b>Top Up with Card</b>\n\n"
-            "<b>VTB Bank | +89041751408 Alexander F.</b>\n\n"
-            "• Save receipt.\n• Contact: @hostelman\n\n⏱ <b>5–15 minutes</b>"
-        ),
-        "topup_nft": "🎁 <b>Top Up with NFT</b>\n\nTransfer to: <b>@hostelman</b>\n\n⏱ <b>5–15 minutes</b>",
-        "invalid_username": "❌ Enter a valid @username:",
-    },
+user_states = {}
+user_temp = {}
+
+settings = {
+    "banner_text": (
+        "👋 Приветствуем в проекте «Gift Exchange».\n\n"
+        "🤝 Наш проект создан для безопасных обменов Telegram подарков между пользователями.\n\n"
+        "👇 Для взаимодействия с ботом, нажмите одну из кнопок ниже:"
+    )
 }
 
-for lang_code in ["az", "tr", "kz", "ua"]:
-    if lang_code not in LANGS:
-        LANGS[lang_code] = dict(LANGS["ru"])
-    LANGS[lang_code]["btn_paid"] = "💸 Я оплатил" if lang_code in ("kz", "ua") else "💸 Ödədim" if lang_code == "az" else "💸 Ödedim"
-    LANGS[lang_code]["paid_notify_admin"] = LANGS["ru"]["paid_notify_admin"]
-    LANGS[lang_code]["paid_notify_seller"] = LANGS["ru"]["paid_notify_seller"]
-    LANGS[lang_code]["paid_confirm"] = LANGS["ru"]["paid_confirm"]
-    LANGS[lang_code]["deal_confirmed_user"] = LANGS["ru"]["deal_confirmed_user"]
-    LANGS[lang_code]["deal_rejected_user"] = LANGS["ru"]["deal_rejected_user"]
-    LANGS[lang_code]["topup_ton"] = (
-        "💎 TON:\n<code>UQDUUFncBcWC4eH3wN_4G3N9Yaf6nBFlcumDP8daYAQHNSOc</code>\n\n"
-        "@hostelman\n\n⏱ <b>5–15 мин</b>"
-    )
-    LANGS[lang_code]["topup_card"] = "💳 <b>ВТБ Банк | +89041751408 Александр Ф.</b>\n\n⏱ <b>5–15 мин</b>"
+CURRENCIES = ["💵 USD", "💶 EUR", "🇷🇺 RUB", "🇺🇦 UAH", "🇰🇿 KZT", "₿ BTC", "💎 ETH", "🔷 USDT", "🪙 TON"]
 
+MENU_BUTTONS = {
+    "📝 Создать сделку",
+    "❓ Как происходит сделка",
+    "ℹ️ Информация",
+    "📞 Техподдержка",
+    "🏆 Топ-15 обменов",
+    "/start",
+    "/admin",
+}
 
-def get_user(uid):
-    if uid not in user_data:
-        user_data[uid] = {"ton_wallet": "", "card": "", "username_stars": "", "has_requisites": False,
-                          "balance": 0.0, "reputation": 0, "deals_count": 0, "reviews": [], "lang": "ru"}
-    return user_data[uid]
-
-def get_lang(uid):
-    return get_user(uid).get("lang", "ru")
-
-def L(uid, key, **kwargs):
-    lang = get_lang(uid)
-    text = LANGS.get(lang, LANGS["ru"]).get(key, LANGS["ru"].get(key, key))
-    if kwargs:
-        text = text.format(**kwargs)
-    return text
-
-def gen_deal_id():
-    deal_counter[0] += 1
-    return f"CD{deal_counter[0]}"
-
-username_map = {}
-
-def find_uid(query: str):
-    q = query.strip()
-    if q.startswith("@"):
-        return username_map.get(q[1:].lower())
+# ===== УТИЛИТЫ =====
+def tg(method, data):
+    url = f"https://api.telegram.org/bot{TOKEN}/{method}"
     try:
-        uid = int(q)
-        return uid if uid in user_data else None
-    except ValueError:
+        r = requests.post(url, json=data, timeout=10)
+        return r.json()
+    except Exception as e:
+        print(f"[tg error] {method}: {e}")
         return None
 
-class SetBanner(StatesGroup):
-    waiting = State()
+def answer_cb(cid, text=None):
+    d = {"callback_query_id": cid}
+    if text:
+        d["text"] = text
+    tg("answerCallbackQuery", d)
 
-class AddReq(StatesGroup):
-    ton = State()
-    card = State()
-    stars = State()
+def send(chat_id, text, markup=None):
+    d = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+    if markup:
+        d["reply_markup"] = markup
+    return tg("sendMessage", d)
 
-class Deal(StatesGroup):
-    partner = State()
-    description = State()
-    amount = State()
-    currency = State()
+def send_inline(chat_id, text, buttons):
+    return send(chat_id, text, {"inline_keyboard": buttons})
 
-class AdminAction(StatesGroup):
-    reputation = State()
-    balance = State()
-    review = State()
+def edit(chat_id, msg_id, text, buttons=None):
+    d = {"chat_id": chat_id, "message_id": msg_id, "text": text, "parse_mode": "HTML"}
+    if buttons:
+        d["reply_markup"] = {"inline_keyboard": buttons}
+    return tg("editMessageText", d)
 
-def main_kb(uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(uid, "btn_deal"), callback_data="deal"),
-         InlineKeyboardButton(text=L(uid, "btn_req"), callback_data="requisites")],
-        [InlineKeyboardButton(text=L(uid, "btn_topup"), callback_data="topup"),
-         InlineKeyboardButton(text=L(uid, "btn_withdraw"), callback_data="withdraw")],
-        [InlineKeyboardButton(text=L(uid, "btn_security"), callback_data="security"),
-         InlineKeyboardButton(text=L(uid, "btn_support"), url="https://t.me/hostelman")],
-        [InlineKeyboardButton(text=L(uid, "btn_language"), callback_data="language")],
-    ])
+def delete(chat_id, msg_id):
+    tg("deleteMessage", {"chat_id": chat_id, "message_id": msg_id})
 
-def back_kb(uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-        [InlineKeyboardButton(text=L(uid, "btn_support"), url="https://t.me/hostelman")],
-    ])
+def mask(username):
+    name = username.lstrip("@")
+    if len(name) <= 3:
+        return f"@{name[0]}***"
+    return f"@{name[:2]}***{name[-2:]}"
 
-def cancel_kb(uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(uid, "btn_cancel"), callback_data="menu")]
-    ])
+def deal_link(deal_id):
+    return f"https://t.me/{BOT_USERNAME}?start=d{deal_id}"
 
-def currency_kb(uid):
-    lang = get_lang(uid)
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💎 TON", callback_data="deal_cur_ton"),
-         InlineKeyboardButton(text="⭐️ Stars", callback_data="deal_cur_stars")],
-        [InlineKeyboardButton(text="💳 " + ("Карта (RUB)" if lang in ("ru", "kz", "ua") else "Card (RUB)"), callback_data="deal_cur_card"),
-         InlineKeyboardButton(text="🎁 NFT", callback_data="deal_cur_nft")],
-        [InlineKeyboardButton(text=L(uid, "btn_cancel"), callback_data="menu")],
-    ])
+def is_admin(user_id):
+    return user_id in ADMIN_IDS
 
-def deal_created_kb(uid, deal_id):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(uid, "btn_paid"), callback_data=f"paid_{deal_id}"),
-         InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-        [InlineKeyboardButton(text=L(uid, "btn_write_middle"), url="https://t.me/hostelman")],
-    ])
-
-def deal_info_kb(uid, deal_id):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(uid, "btn_paid"), callback_data=f"paid_{deal_id}"),
-         InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-        [InlineKeyboardButton(text=L(uid, "btn_write_middle"), url="https://t.me/hostelman")],
-    ])
-
-def admin_deal_confirm_kb(deal_id, buyer_uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"adm_ok_{deal_id}_{buyer_uid}"),
-            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"adm_no_{deal_id}_{buyer_uid}"),
-        ]
-    ])
-
-def req_kb(uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💎 TON", callback_data="req_ton"),
-         InlineKeyboardButton(text="💳 " + ("Карта" if get_lang(uid) in ("ru", "kz", "ua") else "Card"), callback_data="req_card")],
-        [InlineKeyboardButton(text="⭐️ Username Stars", callback_data="req_stars")],
-        [InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-    ])
-
-def add_req_kb(uid, req_type):
-    add_text = {"ru": "Добавить", "en": "Add", "az": "Əlavə et", "tr": "Ekle", "kz": "Қосу", "ua": "Додати"}
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ " + add_text.get(get_lang(uid), "Добавить"), callback_data=f"req_{req_type}_deal")],
-        [InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-    ])
-
-def topup_kb(uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐️ Stars", callback_data="topup_stars"),
-         InlineKeyboardButton(text="💎 TON", callback_data="topup_ton")],
-        [InlineKeyboardButton(text="💳 " + ("Карта" if get_lang(uid) in ("ru", "kz", "ua") else "Card"), callback_data="topup_card"),
-         InlineKeyboardButton(text="🎁 NFT", callback_data="topup_nft")],
-        [InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-        [InlineKeyboardButton(text=L(uid, "btn_support"), url="https://t.me/hostelman")],
-    ])
-
-def topup_paid_kb(uid):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(uid, "btn_paid"), callback_data="paid_topup"),
-         InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")],
-        [InlineKeyboardButton(text=L(uid, "btn_support"), url="https://t.me/hostelman")],
-    ])
-
-def language_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="setlang_ru"),
-         InlineKeyboardButton(text="🇬🇧 English", callback_data="setlang_en")],
-        [InlineKeyboardButton(text="🇦🇿 Azərbaycanca", callback_data="setlang_az"),
-         InlineKeyboardButton(text="🇹🇷 Türkçe", callback_data="setlang_tr")],
-        [InlineKeyboardButton(text="🇰🇿 Қазақша", callback_data="setlang_kz"),
-         InlineKeyboardButton(text="🇺🇦 Українська", callback_data="setlang_ua")],
-    ])
-
-def admin_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🖼 Баннер", callback_data="adm_banner"),
-         InlineKeyboardButton(text="📊 Статистика", callback_data="adm_stats")],
-        [InlineKeyboardButton(text="👥 Пользователи", callback_data="adm_users"),
-         InlineKeyboardButton(text="⭐️ Репутация", callback_data="adm_reputation")],
-        [InlineKeyboardButton(text="💬 Отзыв", callback_data="adm_review"),
-         InlineKeyboardButton(text="💰 Баланс", callback_data="adm_balance")],
-        [InlineKeyboardButton(text="📋 Сделки", callback_data="adm_deals")],
-    ])
-
-async def safe_delete(msg):
-    try:
-        await msg.delete()
-    except Exception:
-        pass
-
-async def show_menu(message: Message, uid: int):
-    banner = user_data.get("_banner")
-    welcome = L(uid, "welcome")
-    kb = main_kb(uid)
-    if banner:
-        await message.answer_photo(photo=banner["photo_id"],
-                                   caption=banner.get("caption") or welcome,
-                                   parse_mode="HTML", reply_markup=kb)
-    else:
-        await message.answer(welcome, parse_mode="HTML", reply_markup=kb)
-
-def _reg(msg: Message):
-    if msg.from_user and msg.from_user.username:
-        username_map[msg.from_user.username.lower()] = msg.from_user.id
-
-
-@dp.message(Command("start"))
-async def cmd_start(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    get_user(uid)
-    if message.from_user.username:
-        username_map[message.from_user.username.lower()] = uid
-    await safe_delete(message)
-
-    args = message.text.split()
-    if len(args) > 1 and args[1].startswith("deal_"):
-        deal_id = args[1].replace("deal_", "", 1)
-        if deal_id in deals:
-            deal = deals[deal_id]
-            if deal["uid"] == uid:
-                await message.answer(L(uid, "own_deal"), reply_markup=main_kb(uid))
-                return
-            buyer_name = f"@{message.from_user.username}" if message.from_user.username else f"ID: {uid}"
-            deal_text = L(uid, "deal_info",
-                          deal_id=deal_id,
-                          description=deal["description"],
-                          amount=deal["amount"],
-                          currency=deal["currency"])
-            await message.answer(deal_text, parse_mode="HTML", reply_markup=deal_info_kb(uid, deal_id))
-            try:
-                seller_uid = deal["uid"]
-                await bot.send_message(seller_uid, L(seller_uid, "partner_notified", deal_id=deal_id, buyer=buyer_name), parse_mode="HTML")
-            except Exception:
-                pass
-        else:
-            await message.answer(L(uid, "deal_not_found"), reply_markup=main_kb(uid))
-        return
-
-    await show_menu(message, uid)
-
-
-@dp.callback_query(F.data == "menu")
-async def cb_menu(callback: CallbackQuery, state: FSMContext):
-    uid = callback.from_user.id
-    await state.clear()
-    await safe_delete(callback.message)
-    await show_menu(callback.message, uid)
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "language")
-async def cb_language(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "lang_choose"), parse_mode="HTML", reply_markup=language_kb())
-    await callback.answer()
-
-
-@dp.callback_query(F.data.startswith("setlang_"))
-async def cb_setlang(callback: CallbackQuery):
-    uid = callback.from_user.id
-    lang_code = callback.data.replace("setlang_", "")
-    get_user(uid)["lang"] = lang_code
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "lang_set"), parse_mode="HTML")
-    await show_menu(callback.message, uid)
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "security")
-async def cb_security(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "security"), parse_mode="HTML",
-                                  reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                                      [InlineKeyboardButton(text=L(uid, "btn_menu"), callback_data="menu")]
-                                  ]))
-    await callback.answer()
-
-
-# ===================== СОЗДАНИЕ СДЕЛКИ — БЕЗ СОГЛАШЕНИЯ =====================
-@dp.callback_query(F.data == "deal")
-async def cb_deal(callback: CallbackQuery, state: FSMContext):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "deal_step1"), parse_mode="HTML", reply_markup=cancel_kb(uid))
-    await state.set_state(Deal.partner)
-    await callback.answer()
-
-
-@dp.message(Deal.partner)
-async def deal_partner(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    _reg(message)
-    await safe_delete(message)
-    text = message.text.strip()
-    if not text.startswith("@"):
-        await message.answer(L(uid, "invalid_username"), parse_mode="HTML", reply_markup=cancel_kb(uid))
-        return
-    await state.update_data(partner=text)
-    await message.answer(L(uid, "deal_step2"), parse_mode="HTML", reply_markup=cancel_kb(uid))
-    await state.set_state(Deal.description)
-
-
-@dp.message(Deal.description)
-async def deal_desc(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    _reg(message)
-    await safe_delete(message)
-    await state.update_data(description=message.text)
-    await message.answer(L(uid, "deal_step3"), parse_mode="HTML", reply_markup=cancel_kb(uid))
-    await state.set_state(Deal.amount)
-
-
-@dp.message(Deal.amount)
-async def deal_amt(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    _reg(message)
-    await safe_delete(message)
-    await state.update_data(amount=message.text)
-    await message.answer(L(uid, "deal_step4"), parse_mode="HTML", reply_markup=currency_kb(uid))
-    await state.set_state(Deal.currency)
-
-
-@dp.callback_query(F.data.startswith("deal_cur_"))
-async def deal_cur(callback: CallbackQuery, state: FSMContext):
-    uid = callback.from_user.id
-    cur_map = {
-        "deal_cur_ton":   ("💎 TON",        "ton_wallet",     "ton"),
-        "deal_cur_stars": ("⭐️ Stars",      "username_stars", "stars"),
-        "deal_cur_card":  ("💳 Card (RUB)", "card",           "card"),
-        "deal_cur_nft":   ("🎁 NFT",        None,             None),
+# ===== КЛАВИАТУРЫ =====
+def kb_main():
+    return {
+        "keyboard": [
+            [{"text": "📝 Создать сделку"}],
+            [{"text": "❓ Как происходит сделка"}, {"text": "ℹ️ Информация"}],
+            [{"text": "📞 Техподдержка"}, {"text": "🏆 Топ-15 обменов"}],
+        ],
+        "resize_keyboard": True,
     }
-    cur_label, req_field, req_type = cur_map[callback.data]
-    user = get_user(uid)
 
-    if req_field and not user.get(req_field):
-        await safe_delete(callback.message)
-        await callback.message.answer(L(uid, "no_req", cur=cur_label), parse_mode="HTML", reply_markup=add_req_kb(uid, req_type))
-        await state.clear()
-        await callback.answer()
-        return
+def kb_admin():
+    return [
+        [{"text": "📊 Статистика", "callback_data": "a_stats"}],
+        [{"text": "📢 Рассылка", "callback_data": "a_broadcast"}],
+        [{"text": "🚫 Бан", "callback_data": "a_ban"}, {"text": "✅ Разбан", "callback_data": "a_unban"}],
+        [{"text": "📝 Баннер", "callback_data": "a_banner"}],
+        [{"text": "📋 Сделки", "callback_data": "a_deals"}],
+        [{"text": "🔄 Обновить топ", "callback_data": "a_top"}],
+        [{"text": "❌ Закрыть", "callback_data": "a_close"}],
+    ]
 
-    data = await state.get_data()
-    deal_id = gen_deal_id()
-    deals[deal_id] = {
-        "uid": uid,
-        "partner": data.get("partner", "—"),
-        "description": data.get("description", "—"),
-        "amount": data.get("amount", "—"),
-        "currency": cur_label,
-        "status": "active"
+def kb_currencies():
+    rows = []
+    for i in range(0, len(CURRENCIES), 3):
+        row = []
+        for cur in CURRENCIES[i:i+3]:
+            row.append({"text": cur, "callback_data": f"currency_{cur}"})
+        rows.append(row)
+    rows.append([{"text": "❌ Отмена", "callback_data": "cancel_deal"}])
+    return rows
+
+# ===== ТОП-15 =====
+def generate_top():
+    names = ["Alex", "Bob", "Carl", "Dan", "Eve", "Frank", "Grace", "Henry",
+             "Ivan", "Jack", "Kate", "Leo", "Mia", "Nick", "Olga"]
+    result = []
+    for _ in range(15):
+        u1 = random.choice(names) + str(random.randint(10, 99))
+        u2 = random.choice(names) + str(random.randint(10, 99))
+        amount = random.randint(50, 1000)
+        cur = random.choice(["USD", "USDT", "RUB", "TON", "ETH"])
+        result.append({"user1": f"@{u1}", "user2": f"@{u2}", "amount": amount, "currency": cur})
+    result.sort(key=lambda x: x["amount"], reverse=True)
+    return result
+
+# ===== СБРОС СОСТОЯНИЯ =====
+def reset_state(user_id):
+    user_states.pop(user_id, None)
+    user_temp.pop(user_id, None)
+
+# ===== ТЕКСТ СДЕЛКИ С ИНСТРУКЦИЕЙ =====
+def deal_text_full(deal, deal_id):
+    my_nft = deal.get("my_nft", "—")
+    his_nft = deal.get("his_nft", "—")
+    amount = deal["amount"]
+    currency = deal["currency"]
+    creator = deal["creator_name"]
+    second = deal["second_user"]
+
+    return (
+        f"✅ <b>СДЕЛКА СОЗДАНА!</b>\n\n"
+        f"🆔 <b>Номер:</b> <code>{deal_id}</code>\n"
+        f"👤 <b>Создатель:</b> @{creator}\n"
+        f"👤 <b>Участник:</b> @{second}\n"
+        f"💰 <b>Сумма:</b> {amount} {currency}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🎁 <b>NFT создателя:</b> {my_nft}\n"
+        f"🎁 <b>NFT участника:</b> {his_nft}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 <b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n\n"
+        f"🔴 <b>@{creator} (создатель)</b> — передайте вашу NFT менеджеру:\n"
+        f"     👉 <b>@{MANAGER}</b>\n\n"
+        f"🔵 <b>@{second} (участник)</b> — ожидайте подтверждения от менеджера,\n"
+        f"     затем передайте свою NFT менеджеру:\n"
+        f"     👉 <b>@{MANAGER}</b>\n\n"
+        f"⚠️ <b>Не передавайте NFT напрямую!</b> Только через @{MANAGER}\n"
+        f"⏱ Время обмена: <b>5–15 минут</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🔗 <b>Ссылка для участника:</b>\n"
+        f"{deal_link(deal_id)}"
+    )
+
+def deal_info_text(deal, deal_id):
+    status_map = {
+        "waiting": "⏳ Ожидает принятия",
+        "in_progress": "🔄 В процессе",
+        "cancelled": "❌ Отменена",
+        "completed": "✅ Завершена",
     }
-    user["deals_count"] = user.get("deals_count", 0) + 1
+    my_nft = deal.get("my_nft", "—")
+    his_nft = deal.get("his_nft", "—")
+    creator = deal["creator_name"]
+    second = deal["second_user"]
+    return (
+        f"🔍 <b>СДЕЛКА #{deal_id}</b>\n\n"
+        f"👤 <b>Создатель:</b> @{creator}\n"
+        f"👤 <b>Участник:</b> @{second}\n"
+        f"💰 <b>Сумма:</b> {deal['amount']} {deal['currency']}\n"
+        f"📊 <b>Статус:</b> {status_map.get(deal['status'], deal['status'])}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🎁 <b>NFT создателя:</b> {my_nft}\n"
+        f"🎁 <b>NFT участника:</b> {his_nft}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 <b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n\n"
+        f"🔴 <b>@{creator} (создатель)</b> — передайте вашу NFT менеджеру:\n"
+        f"     👉 <b>@{MANAGER}</b>\n\n"
+        f"🔵 <b>@{second} (участник)</b> — после подтверждения от менеджера\n"
+        f"     передайте свою NFT менеджеру:\n"
+        f"     👉 <b>@{MANAGER}</b>\n\n"
+        f"⚠️ Только через <b>@{MANAGER}</b>, не напрямую!\n"
+        f"⏱ Время: <b>5–15 минут</b>"
+    )
 
-    me = await bot.get_me()
-    deal_text = L(uid, "deal_created",
-                  deal_id=deal_id,
-                  partner=data.get("partner", "—"),
-                  description=data.get("description", "—"),
-                  amount=data.get("amount", "—"),
-                  currency=cur_label,
-                  bot_username=me.username)
+# ===== ОБРАБОТКА СООБЩЕНИЙ =====
+def handle_message(message):
+    global top_deals
 
-    await safe_delete(callback.message)
-    await callback.message.answer(deal_text, parse_mode="HTML", reply_markup=deal_created_kb(uid, deal_id))
+    chat_id = message["chat"]["id"]
+    text = message.get("text", "").strip()
+    user_id = message["from"]["id"]
+    username = message["from"].get("username", "NoUsername")
+    first_name = message["from"].get("first_name", "Пользователь")
 
-    uname = f"@{callback.from_user.username}" if callback.from_user.username else f"ID: {uid}"
-    for admin_id in ADMIN_IDS:
-        await bot.send_message(
-            admin_id,
-            f"🆕 <b>Новая сделка {deal_id}</b>\n\n"
-            f"👤 {uname} | ID: <code>{uid}</code>\n"
-            f"👥 Партнёр: {data.get('partner', '—')}\n"
-            f"📋 Суть: {data.get('description', '—')}\n"
-            f"💵 Сумма: {data.get('amount', '—')}\n"
-            f"💱 Валюта: {cur_label}",
-            parse_mode="HTML"
-        )
-    await state.clear()
-    await callback.answer()
-
-
-# ===================== КНОПКА "Я ОПЛАТИЛ" =====================
-@dp.callback_query(F.data.startswith("paid_"))
-async def cb_paid(callback: CallbackQuery):
-    uid = callback.from_user.id
-    deal_id = callback.data.replace("paid_", "")
-    uname = f"@{callback.from_user.username}" if callback.from_user.username else f"ID: {uid}"
-
-    if deal_id == "topup":
-        for admin_id in ADMIN_IDS:
-            await bot.send_message(
-                admin_id,
-                f"💸 <b>Пользователь сообщил об оплате (пополнение)</b>\n\n👤 {uname} | ID: <code>{uid}</code>",
-                parse_mode="HTML"
-            )
-        await callback.answer("✅ Уведомление отправлено менеджеру!", show_alert=True)
-        await callback.message.answer(L(uid, "paid_confirm"), parse_mode="HTML", reply_markup=back_kb(uid))
+    if user_id in banned_users:
+        send(chat_id, "🚫 Вы забанены в боте!")
         return
 
-    deal = deals.get(deal_id)
-    if not deal:
-        await callback.answer("❌ Сделка не найдена", show_alert=True)
+    users[user_id] = {"username": username, "first_name": first_name, "chat_id": chat_id}
+
+    if text in MENU_BUTTONS or text.startswith("/start"):
+        reset_state(user_id)
+
+    state = user_states.get(user_id)
+
+    # ===== СОСТОЯНИЯ СОЗДАНИЯ СДЕЛКИ =====
+    if state == "wait_username":
+        second_user = text.lstrip("@").strip()
+        if not second_user or " " in second_user:
+            send(chat_id, "<b>❌ Введите корректный @username (без пробелов):</b>")
+            return
+        user_temp[user_id]["second_user"] = second_user
+        user_states[user_id] = "wait_my_nft"
+        send(chat_id, "<b>Введите ссылку на ВАШУ NFT (которую отдаёте):</b>")
         return
 
-    amount = deal.get("amount", "—")
-    currency = deal.get("currency", "—")
+    if state == "wait_my_nft":
+        user_temp[user_id]["my_nft"] = text
+        user_states[user_id] = "wait_his_nft"
+        send(chat_id, "<b>Введите ссылку на ЕГО NFT (которую получаете):</b>")
+        return
 
-    for admin_id in ADMIN_IDS:
-        await bot.send_message(
-            admin_id,
-            L(admin_id, "paid_notify_admin", deal_id=deal_id, user=uname, amount=amount, currency=currency),
-            parse_mode="HTML",
-            reply_markup=admin_deal_confirm_kb(deal_id, uid)
-        )
+    if state == "wait_his_nft":
+        user_temp[user_id]["his_nft"] = text
+        user_states[user_id] = "wait_currency"
+        send_inline(chat_id, "<b>💱 Выберите валюту сделки:</b>", kb_currencies())
+        return
 
-    seller_uid = deal.get("uid")
-    if seller_uid and seller_uid != uid:
+    if state == "wait_amount":
+        raw = text.replace(",", ".").replace(" ", "")
         try:
-            await bot.send_message(
-                seller_uid,
-                L(seller_uid, "paid_notify_seller", deal_id=deal_id),
-                parse_mode="HTML"
+            amount = float(raw)
+            if amount <= 0:
+                send(chat_id, "<b>❌ Сумма должна быть больше нуля. Введите ещё раз:</b>")
+                return
+        except ValueError:
+            send(chat_id, "<b>❌ Введите число, например: 150 или 0.5</b>")
+            return
+        currency = user_temp[user_id].get("currency", "USD")
+        _create_deal(chat_id, user_id, username, amount, currency)
+        return
+
+    # ===== СОСТОЯНИЯ АДМИНА =====
+    if state == "a_broadcast" and is_admin(user_id):
+        reset_state(user_id)
+        sent = 0
+        for uid, ud in users.items():
+            if uid not in ADMIN_IDS:
+                try:
+                    send(ud["chat_id"], f"<b>📢 Сообщение от администратора:</b>\n\n{text}")
+                    sent += 1
+                    time.sleep(0.05)
+                except:
+                    pass
+        send(chat_id, f"<b>✅ Рассылка отправлена: {sent} пользователям</b>")
+        return
+
+    if state == "a_ban" and is_admin(user_id):
+        reset_state(user_id)
+        target = text.lstrip("@").strip()
+        found = False
+        for uid, ud in users.items():
+            if ud.get("username", "").lower() == target.lower() or str(uid) == target:
+                banned_users.add(uid)
+                send(chat_id, f"<b>✅ @{target} забанен</b>")
+                found = True
+                break
+        if not found:
+            send(chat_id, "<b>❌ Пользователь не найден</b>")
+        return
+
+    if state == "a_unban" and is_admin(user_id):
+        reset_state(user_id)
+        target = text.lstrip("@").strip()
+        found = False
+        for uid in list(banned_users):
+            ud = users.get(uid, {})
+            if ud.get("username", "").lower() == target.lower() or str(uid) == target:
+                banned_users.discard(uid)
+                send(chat_id, f"<b>✅ @{target} разбанен</b>")
+                found = True
+                break
+        if not found:
+            send(chat_id, "<b>❌ Пользователь не найден в бан-листе</b>")
+        return
+
+    if state == "a_banner" and is_admin(user_id):
+        reset_state(user_id)
+        settings["banner_text"] = text
+        send(chat_id, f"<b>✅ Баннер обновлён!</b>\n\n{text}")
+        return
+
+    # ===== КОМАНДЫ И КНОПКИ =====
+    if text == "/start":
+        send(chat_id, settings["banner_text"], kb_main())
+        return
+
+    if text.startswith("/start d"):
+        deal_id = text[8:].strip()
+        _show_deal(chat_id, user_id, username, deal_id)
+        return
+
+    if text == "/admin" and is_admin(user_id):
+        t = (
+            f"<b>👨‍💼 ПАНЕЛЬ АДМИНИСТРАТОРА</b>\n\n"
+            f"<b>📊 Сделок:</b> {len(deals)}\n"
+            f"<b>👥 Пользователей:</b> {len(users)}\n"
+            f"<b>🚫 Забанено:</b> {len(banned_users)}"
+        )
+        send_inline(chat_id, t, kb_admin())
+        return
+
+    if text == "📝 Создать сделку":
+        user_states[user_id] = "wait_username"
+        user_temp[user_id] = {}
+        send(chat_id, "<b>Введите @username второго участника сделки:</b>")
+        return
+
+    if text == "❓ Как происходит сделка":
+        t = (
+            "<b>❓ Как происходит сделка в Gift Exchange?</b>\n\n"
+            "• Участники договариваются об условиях 🤝\n"
+            "• Один создаёт сделку через бота 🎁\n"
+            "• Второй получает ссылку и открывает сделку 📤\n"
+            f"• Создатель передаёт NFT менеджеру @{MANAGER} 💰\n"
+            "• Менеджер одобряет ✔️\n"
+            f"• Участник передаёт свою NFT менеджеру @{MANAGER} 📦\n"
+            "• Менеджер передаёт NFT первому 🔄\n"
+            "• Сделка завершена! ✅"
+        )
+        send_inline(chat_id, t, [[{"text": "🏠 Главное меню", "callback_data": "main_menu"}]])
+        return
+
+    if text == "ℹ️ Информация":
+        t = (
+            "<b>📤 Gift Exchange — безопасный обмен NFT-подарками в Telegram.</b>\n\n"
+            "<b>Плюсы проекта:</b>\n"
+            "• Быстрые и безопасные обмены\n"
+            "• Техподдержка 24/7\n"
+            "• Гарантия каждой сделки\n"
+            "• Конфиденциальность данных\n\n"
+            f"<b>📞 Менеджер:</b> @{MANAGER}"
+        )
+        send_inline(chat_id, t, [
+            [{"text": "❓ Как происходит сделка", "callback_data": "how_deal"}],
+            [{"text": "🏠 Главное меню", "callback_data": "main_menu"}],
+        ])
+        return
+
+    if text == "📞 Техподдержка":
+        send(chat_id,
+             f"<b>📞 Техническая поддержка:</b>\n\n"
+             f"<b>👤 Поддержка:</b> @{SUPPORT}\n"
+             f"<b>👤 Менеджер:</b> @{MANAGER}\n\n"
+             "<b>Напишите им в личные сообщения!</b>",
+             kb_main())
+        return
+
+    if text == "🏆 Топ-15 обменов":
+        if not top_deals:
+            top_deals = generate_top()
+        lines = "<b>🏆 ТОП-15 ЛУЧШИХ ОБМЕНОВ</b>\n\n"
+        for i, d in enumerate(top_deals[:15], 1):
+            lines += f"<b>{i}.</b> {mask(d['user1'])} ↔ {mask(d['user2'])} — {d['amount']} {d['currency']}\n"
+        send(chat_id, lines, kb_main())
+        return
+
+# ===== СОЗДАНИЕ СДЕЛКИ (без подтверждения) =====
+def _create_deal(chat_id, user_id, username, amount, currency):
+    global top_deals
+
+    deal_id = str(uuid.uuid4())[:8]
+    temp = user_temp.get(user_id, {})
+    second_user = temp.get("second_user", "")
+    my_nft = temp.get("my_nft", "")
+    his_nft = temp.get("his_nft", "")
+
+    deals[deal_id] = {
+        "creator_id": user_id,
+        "creator_name": username,
+        "second_user": second_user,
+        "my_nft": my_nft,
+        "his_nft": his_nft,
+        "amount": amount,
+        "currency": currency,
+        "status": "in_progress",
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "participant_id": None,
+    }
+
+    reset_state(user_id)
+
+    # Добавляем в топ
+    top_deals.append({
+        "user1": f"@{username}",
+        "user2": f"@{second_user}",
+        "amount": amount,
+        "currency": currency,
+    })
+    top_deals = sorted(top_deals, key=lambda x: x["amount"], reverse=True)[:15]
+
+    t = deal_text_full(deals[deal_id], deal_id)
+    buttons = [
+        [{"text": "💬 Написать менеджеру", "url": f"https://t.me/{MANAGER}"}],
+        [{"text": "🏠 В меню", "callback_data": "main_menu"}],
+    ]
+    send_inline(chat_id, t, buttons)
+
+    # Уведомляем второго участника если он уже в боте
+    for uid, ud in users.items():
+        if ud.get("username", "").lower() == second_user.lower():
+            notify = (
+                f"<b>🔔 Вас приглашают к обмену!</b>\n\n"
+                f"<b>@{username} создал сделку с вами</b>\n\n"
+                f"🆔 <b>Номер:</b> <code>{deal_id}</code>\n"
+                f"💰 <b>Сумма:</b> {amount} {currency}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"📦 <b>Что нужно сделать:</b>\n\n"
+                f"🔵 <b>Вы (участник)</b> — после того как создатель передаст NFT,\n"
+                f"     передайте свою NFT менеджеру:\n"
+                f"     👉 <b>@{MANAGER}</b>\n\n"
+                f"⚠️ Только через менеджера, не напрямую!\n\n"
+                f"🔗 <b>Открыть сделку:</b> {deal_link(deal_id)}"
             )
-        except Exception:
-            pass
+            send_inline(ud["chat_id"], notify, [
+                [{"text": "💬 Написать менеджеру", "url": f"https://t.me/{MANAGER}"}],
+            ])
+            break
 
-    await callback.answer("✅ Уведомление отправлено!", show_alert=True)
-    await callback.message.answer(L(uid, "paid_confirm"), parse_mode="HTML", reply_markup=back_kb(uid))
+    # Уведомляем всех админов
+    admin_notify = (
+        f"🆕 <b>Новая сделка!</b>\n\n"
+        f"🆔 <code>{deal_id}</code>\n"
+        f"👤 Создатель: @{username} | ID: <code>{user_id}</code>\n"
+        f"👤 Участник: @{second_user}\n"
+        f"🎁 NFT создателя: {my_nft}\n"
+        f"🎁 NFT участника: {his_nft}\n"
+        f"💰 Сумма: {amount} {currency}\n"
+        f"📅 {deals[deal_id]['created_at']}"
+    )
+    for admin_id in ADMIN_IDS:
+        ad = users.get(admin_id, {})
+        if ad.get("chat_id"):
+            send(ad["chat_id"], admin_notify)
 
+def _show_deal(chat_id, user_id, username, deal_id):
+    if deal_id not in deals:
+        send(chat_id, "<b>❌ Сделка не найдена!</b>", kb_main())
+        return
+    deal = deals[deal_id]
+    t = deal_info_text(deal, deal_id)
+    buttons = [
+        [{"text": "💬 Написать менеджеру", "url": f"https://t.me/{MANAGER}"}],
+        [{"text": "🏠 В меню", "callback_data": "main_menu"}],
+    ]
+    send_inline(chat_id, t, buttons)
 
-# ===================== АДМИН: ПОДТВЕРДИТЬ =====================
-@dp.callback_query(F.data.startswith("adm_ok_"))
-async def adm_confirm_deal(callback: CallbackQuery):
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
+# ===== ОБРАБОТКА CALLBACK =====
+def handle_callback(callback):
+    global top_deals
+
+    cid = callback["id"]
+    chat_id = callback["message"]["chat"]["id"]
+    msg_id = callback["message"]["message_id"]
+    data = callback["data"]
+    user_id = callback["from"]["id"]
+    username = callback["from"].get("username", "NoUsername")
+
+    answer_cb(cid)
+
+    if data.startswith("currency_"):
+        if user_states.get(user_id) != "wait_currency":
+            return
+        currency = data[len("currency_"):]
+        user_temp[user_id]["currency"] = currency
+        user_states[user_id] = "wait_amount"
+        edit(chat_id, msg_id,
+             f"<b>Валюта выбрана: {currency}</b>\n\n<b>Введите сумму сделки (например: 150 или 0.5):</b>")
         return
 
-    raw = callback.data.replace("adm_ok_", "")
-    parts = raw.rsplit("_", 1)
-    deal_id = parts[0]
-    buyer_uid = int(parts[1])
+    if data == "cancel_deal":
+        reset_state(user_id)
+        delete(chat_id, msg_id)
+        send(chat_id, "<b>❌ Создание сделки отменено.</b>", kb_main())
+        return
 
-    deal = deals.get(deal_id)
-    if deal:
-        deal["status"] = "completed"
+    if data == "main_menu":
+        delete(chat_id, msg_id)
+        send(chat_id, settings["banner_text"], kb_main())
+        return
 
-    try:
-        await bot.send_message(buyer_uid, L(buyer_uid, "deal_confirmed_user", deal_id=deal_id),
-                               parse_mode="HTML", reply_markup=back_kb(buyer_uid))
-    except Exception:
-        pass
-
-    if deal:
-        seller_uid = deal.get("uid")
-        if seller_uid and seller_uid != buyer_uid:
-            try:
-                await bot.send_message(
-                    seller_uid,
-                    f"✅ <b>Оплата по сделке <code>{deal_id}</code> подтверждена!</b>\n\nСделка завершена.",
-                    parse_mode="HTML", reply_markup=back_kb(seller_uid)
-                )
-            except Exception:
-                pass
-
-    admin_name = f"@{callback.from_user.username}" if callback.from_user.username else f"ID:{callback.from_user.id}"
-    try:
-        await callback.message.edit_text(
-            callback.message.text + f"\n\n✅ <b>Подтверждено: {admin_name}</b>",
-            parse_mode="HTML"
+    if data == "how_deal":
+        t = (
+            "<b>❓ Как происходит сделка в Gift Exchange?</b>\n\n"
+            "• Участники договариваются об условиях 🤝\n"
+            "• Один создаёт сделку через бота 🎁\n"
+            "• Второй получает ссылку и открывает сделку 📤\n"
+            f"• Создатель передаёт NFT менеджеру @{MANAGER} 💰\n"
+            "• Менеджер одобряет ✔️\n"
+            f"• Участник передаёт свою NFT менеджеру @{MANAGER} 📦\n"
+            "• Менеджер передаёт NFT первому 🔄\n"
+            "• Сделка завершена! ✅"
         )
-    except Exception:
-        pass
-    await callback.answer("✅ Подтверждено!", show_alert=True)
-
-
-# ===================== АДМИН: ОТКЛОНИТЬ =====================
-@dp.callback_query(F.data.startswith("adm_no_"))
-async def adm_reject_deal(callback: CallbackQuery):
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer("⛔ Нет доступа", show_alert=True)
+        edit(chat_id, msg_id, t, [[{"text": "🏠 Главное меню", "callback_data": "main_menu"}]])
         return
 
-    raw = callback.data.replace("adm_no_", "")
-    parts = raw.rsplit("_", 1)
-    deal_id = parts[0]
-    buyer_uid = int(parts[1])
+    # ===== ADMIN CALLBACKS =====
+    if not is_admin(user_id):
+        return
 
-    try:
-        await bot.send_message(buyer_uid, L(buyer_uid, "deal_rejected_user", deal_id=deal_id),
-                               parse_mode="HTML", reply_markup=back_kb(buyer_uid))
-    except Exception:
-        pass
-
-    deal = deals.get(deal_id)
-    if deal:
-        seller_uid = deal.get("uid")
-        if seller_uid and seller_uid != buyer_uid:
-            try:
-                await bot.send_message(
-                    seller_uid,
-                    f"❌ <b>Оплата по сделке <code>{deal_id}</code> отклонена.</b>\n\nПоддержка: @hostelman",
-                    parse_mode="HTML", reply_markup=back_kb(seller_uid)
-                )
-            except Exception:
-                pass
-
-    admin_name = f"@{callback.from_user.username}" if callback.from_user.username else f"ID:{callback.from_user.id}"
-    try:
-        await callback.message.edit_text(
-            callback.message.text + f"\n\n❌ <b>Отклонено: {admin_name}</b>",
-            parse_mode="HTML"
+    if data == "a_stats":
+        t = (
+            f"<b>📊 СТАТИСТИКА</b>\n\n"
+            f"Всего сделок: {len(deals)}\n"
+            f"⏳ Ожидают: {sum(1 for d in deals.values() if d['status']=='waiting')}\n"
+            f"🔄 В процессе: {sum(1 for d in deals.values() if d['status']=='in_progress')}\n"
+            f"✅ Завершено: {sum(1 for d in deals.values() if d['status']=='completed')}\n"
+            f"❌ Отменено: {sum(1 for d in deals.values() if d['status']=='cancelled')}\n\n"
+            f"👥 Пользователей: {len(users)}\n"
+            f"🚫 Забанено: {len(banned_users)}\n"
+            f"🏆 В топе: {len(top_deals)}"
         )
-    except Exception:
-        pass
-    await callback.answer("❌ Отклонено!", show_alert=True)
-
-
-@dp.callback_query(F.data.endswith("_deal") & F.data.startswith("req_"))
-async def req_from_deal(callback: CallbackQuery, state: FSMContext):
-    uid = callback.from_user.id
-    req_type = callback.data.replace("req_", "").replace("_deal", "")
-    key_map = {"ton": "enter_ton", "card": "enter_card", "stars": "enter_stars"}
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, key_map[req_type]), parse_mode="HTML", reply_markup=cancel_kb(uid))
-    state_map = {"ton": AddReq.ton, "card": AddReq.card, "stars": AddReq.stars}
-    await state.set_state(state_map[req_type])
-    await state.update_data(from_deal=True)
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "requisites")
-async def cb_req(callback: CallbackQuery):
-    uid = callback.from_user.id
-    u = get_user(uid)
-    text = L(uid, "req_title", ton=u.get("ton_wallet") or "—", card=u.get("card") or "—", stars=u.get("username_stars") or "—")
-    await safe_delete(callback.message)
-    await callback.message.answer(text, parse_mode="HTML", reply_markup=req_kb(uid))
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "req_ton")
-async def cb_req_ton(callback: CallbackQuery, state: FSMContext):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "enter_ton"), parse_mode="HTML", reply_markup=cancel_kb(uid))
-    await state.set_state(AddReq.ton)
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "req_card")
-async def cb_req_card(callback: CallbackQuery, state: FSMContext):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "enter_card"), parse_mode="HTML", reply_markup=cancel_kb(uid))
-    await state.set_state(AddReq.card)
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "req_stars")
-async def cb_req_stars(callback: CallbackQuery, state: FSMContext):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "enter_stars"), parse_mode="HTML", reply_markup=cancel_kb(uid))
-    await state.set_state(AddReq.stars)
-    await callback.answer()
-
-
-@dp.message(AddReq.ton)
-async def save_ton(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    _reg(message)
-    get_user(uid).update({"ton_wallet": message.text, "has_requisites": True})
-    data = await state.get_data()
-    await safe_delete(message)
-    await state.clear()
-    suffix = L(uid, "redo_deal") if data.get("from_deal") else ""
-    await message.answer(L(uid, "ton_saved") + suffix, parse_mode="HTML", reply_markup=main_kb(uid))
-
-
-@dp.message(AddReq.card)
-async def save_card(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    _reg(message)
-    get_user(uid).update({"card": message.text, "has_requisites": True})
-    data = await state.get_data()
-    await safe_delete(message)
-    await state.clear()
-    suffix = L(uid, "redo_deal") if data.get("from_deal") else ""
-    await message.answer(L(uid, "card_saved") + suffix, parse_mode="HTML", reply_markup=main_kb(uid))
-
-
-@dp.message(AddReq.stars)
-async def save_stars(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    _reg(message)
-    get_user(uid).update({"username_stars": message.text, "has_requisites": True})
-    data = await state.get_data()
-    await safe_delete(message)
-    await state.clear()
-    suffix = L(uid, "redo_deal") if data.get("from_deal") else ""
-    await message.answer(L(uid, "stars_saved") + suffix, parse_mode="HTML", reply_markup=main_kb(uid))
-
-
-@dp.callback_query(F.data == "topup")
-async def cb_topup(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "topup_title"), parse_mode="HTML", reply_markup=topup_kb(uid))
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "topup_stars")
-async def cb_topup_stars(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "topup_stars"), parse_mode="HTML", reply_markup=topup_paid_kb(uid))
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "topup_ton")
-async def cb_topup_ton(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "topup_ton"), parse_mode="HTML", reply_markup=topup_paid_kb(uid))
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "topup_card")
-async def cb_topup_card(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "topup_card"), parse_mode="HTML", reply_markup=topup_paid_kb(uid))
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "topup_nft")
-async def cb_topup_nft(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "topup_nft"), parse_mode="HTML", reply_markup=topup_paid_kb(uid))
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "withdraw")
-async def cb_withdraw(callback: CallbackQuery):
-    uid = callback.from_user.id
-    await safe_delete(callback.message)
-    await callback.message.answer(L(uid, "withdraw_text"), parse_mode="HTML", reply_markup=back_kb(uid))
-    await callback.answer()
-
-
-@dp.message(Command("adm"))
-async def cmd_adm(message: Message):
-    if message.from_user.id not in ADMIN_IDS:
+        edit(chat_id, msg_id, t, kb_admin())
         return
-    await safe_delete(message)
-    total = len([k for k in user_data if not str(k).startswith("_")])
-    await message.answer(
-        f"🔧 <b>Админ-панель | Crypto Middle</b>\n\n"
-        f"👥 Пользователей: <b>{total}</b>\n"
-        f"📋 Сделок: <b>{len(deals)}</b>",
-        parse_mode="HTML", reply_markup=admin_kb())
 
-
-@dp.callback_query(F.data == "adm_banner")
-async def adm_banner(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id not in ADMIN_IDS: return
-    await safe_delete(callback.message)
-    await callback.message.answer(
-        "📸 Отправьте <b>фото + подпись</b> для нового баннера.",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Отмена", callback_data="adm_cancel")]]))
-    await state.set_state(SetBanner.waiting)
-    await callback.answer()
-
-
-@dp.message(SetBanner.waiting, F.photo)
-async def save_banner(message: Message, state: FSMContext):
-    if message.from_user.id not in ADMIN_IDS: return
-    user_data["_banner"] = {"photo_id": message.photo[-1].file_id, "caption": message.caption or ""}
-    await safe_delete(message)
-    await message.answer("✅ Баннер обновлён!", reply_markup=admin_kb())
-    await state.clear()
-
-
-@dp.callback_query(F.data == "adm_stats")
-async def adm_stats(callback: CallbackQuery):
-    if callback.from_user.id not in ADMIN_IDS: return
-    total = len([k for k in user_data if not str(k).startswith("_")])
-    with_req = len([v for k, v in user_data.items() if not str(k).startswith("_") and isinstance(v, dict) and v.get("has_requisites")])
-    active = len([d for d in deals.values() if d.get("status") == "active"])
-    completed = len([d for d in deals.values() if d.get("status") == "completed"])
-    await callback.message.answer(
-        f"📊 <b>Статистика</b>\n\n"
-        f"👥 Всего: <b>{total}</b>\n"
-        f"🧾 С реквизитами: <b>{with_req}</b>\n"
-        f"📋 Сделок: <b>{len(deals)}</b>\n"
-        f"🟢 Активных: <b>{active}</b>\n"
-        f"✅ Завершённых: <b>{completed}</b>",
-        parse_mode="HTML")
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "adm_users")
-async def adm_users(callback: CallbackQuery):
-    if callback.from_user.id not in ADMIN_IDS: return
-    ulist = [k for k in user_data if not str(k).startswith("_")]
-    text = f"👥 <b>Пользователи ({len(ulist)})</b>\n\n"
-    for uid in ulist[:20]:
-        u = user_data[uid]
-        if not isinstance(u, dict): continue
-        text += f"• <code>{uid}</code> | ⭐{u.get('reputation', 0)} | Сд:{u.get('deals_count', 0)} | {'✅' if u.get('has_requisites') else '❌'} | {u.get('lang', 'ru')}\n"
-    if len(ulist) > 20:
-        text += f"\n...ещё {len(ulist) - 20}"
-    await callback.message.answer(text, parse_mode="HTML")
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "adm_reputation")
-async def adm_rep(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id not in ADMIN_IDS: return
-    await callback.message.answer(
-        "⭐️ <b>Выдача репутации</b>\n\nФормат: <code>@username +5</code>",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Отмена", callback_data="adm_cancel")]]))
-    await state.set_state(AdminAction.reputation)
-    await callback.answer()
-
-
-@dp.message(AdminAction.reputation)
-async def process_rep(message: Message, state: FSMContext):
-    if message.from_user.id not in ADMIN_IDS: return
-    try:
-        parts = message.text.strip().split()
-        uid = find_uid(parts[0])
-        if uid is None:
-            await message.answer("❌ Пользователь не найден.")
-            await state.clear()
-            return
-        delta = int(parts[1])
-        user = get_user(uid)
-        user["reputation"] = user.get("reputation", 0) + delta
-        await message.answer(f"✅ Репутация <code>{uid}</code>: {delta:+}\nИтого: <b>{user['reputation']} ⭐</b>", parse_mode="HTML")
-        await bot.send_message(uid, f"⭐️ Ваша репутация изменена: <b>{delta:+}</b>\nТекущая: <b>{user['reputation']} ⭐</b>", parse_mode="HTML")
-    except Exception:
-        await message.answer("❌ Ошибка. Формат: <code>@username +5</code>", parse_mode="HTML")
-    await state.clear()
-
-
-@dp.callback_query(F.data == "adm_review")
-async def adm_review(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id not in ADMIN_IDS: return
-    await callback.message.answer(
-        "💬 <b>Добавить отзыв</b>\n\nФормат: <code>@username Текст</code>",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Отмена", callback_data="adm_cancel")]]))
-    await state.set_state(AdminAction.review)
-    await callback.answer()
-
-
-@dp.message(AdminAction.review)
-async def process_review(message: Message, state: FSMContext):
-    if message.from_user.id not in ADMIN_IDS: return
-    try:
-        parts = message.text.strip().split(maxsplit=1)
-        uid = find_uid(parts[0])
-        if uid is None:
-            await message.answer("❌ Пользователь не найден.")
-            await state.clear()
-            return
-        get_user(uid).setdefault("reviews", []).append(parts[1])
-        await message.answer(f"✅ Отзыв добавлен <code>{uid}</code>", parse_mode="HTML")
-        await bot.send_message(uid, f"💬 <b>Новый отзыв:</b>\n\n{parts[1]}", parse_mode="HTML")
-    except Exception:
-        await message.answer("❌ Ошибка.")
-    await state.clear()
-
-
-@dp.callback_query(F.data == "adm_balance")
-async def adm_bal(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id not in ADMIN_IDS: return
-    await callback.message.answer(
-        "💰 <b>Изменить баланс</b>\n\nФормат: <code>@username 150.5</code>",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Отмена", callback_data="adm_cancel")]]))
-    await state.set_state(AdminAction.balance)
-    await callback.answer()
-
-
-@dp.message(AdminAction.balance)
-async def process_bal(message: Message, state: FSMContext):
-    if message.from_user.id not in ADMIN_IDS: return
-    try:
-        parts = message.text.strip().split()
-        uid = find_uid(parts[0])
-        if uid is None:
-            await message.answer("❌ Пользователь не найден.")
-            await state.clear()
-            return
-        amount = float(parts[1])
-        user = get_user(uid)
-        old = user.get("balance", 0)
-        user["balance"] = amount
-        await message.answer(f"✅ Баланс <code>{uid}</code>: {old} → <b>{amount}</b>", parse_mode="HTML")
-        await bot.send_message(uid, f"💰 Ваш баланс обновлён: <b>{amount}</b>", parse_mode="HTML")
-    except Exception:
-        await message.answer("❌ Ошибка.")
-    await state.clear()
-
-
-@dp.callback_query(F.data == "adm_deals")
-async def adm_deals_cb(callback: CallbackQuery):
-    if callback.from_user.id not in ADMIN_IDS: return
-    if not deals:
-        await callback.message.answer("📋 Сделок пока нет.")
-        await callback.answer()
+    if data == "a_broadcast":
+        user_states[user_id] = "a_broadcast"
+        edit(chat_id, msg_id, "<b>📢 Введите текст рассылки:</b>")
         return
-    text = f"📋 <b>Сделки ({len(deals)})</b>\n\n"
-    for deal_id, d in list(deals.items())[-10:]:
-        status_emoji = "✅" if d["status"] == "completed" else "🟢"
-        text += (f"🆔 <code>{deal_id}</code> | 👤 {d['uid']} | 👥 {d.get('partner', '—')}\n"
-                 f"💵 {d['amount']} {d['currency']} | {d['description'][:20]}\n"
-                 f"{status_emoji} {d['status']}\n\n")
-    await callback.message.answer(text, parse_mode="HTML")
-    await callback.answer()
 
+    if data == "a_ban":
+        user_states[user_id] = "a_ban"
+        edit(chat_id, msg_id, "<b>🚫 Введите @username или ID для бана:</b>")
+        return
 
-@dp.callback_query(F.data == "adm_cancel")
-async def adm_cancel(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.message.answer("❌ Отменено.", reply_markup=admin_kb())
-    await callback.answer()
+    if data == "a_unban":
+        user_states[user_id] = "a_unban"
+        edit(chat_id, msg_id, "<b>✅ Введите @username или ID для разбана:</b>")
+        return
 
+    if data == "a_banner":
+        user_states[user_id] = "a_banner"
+        edit(chat_id, msg_id,
+             f"<b>📝 Введите новый текст баннера:</b>\n\n<b>Текущий:</b>\n{settings['banner_text']}")
+        return
 
-async def main():
-    print("✅ Crypto Middle Bot запущен!")
-    await dp.start_polling(bot)
+    if data == "a_deals":
+        if not deals:
+            edit(chat_id, msg_id, "<b>📭 Сделок пока нет</b>", kb_admin())
+            return
+        icons = {"waiting": "⏳", "in_progress": "🔄", "cancelled": "❌", "completed": "✅"}
+        t = "<b>📋 ПОСЛЕДНИЕ 10 СДЕЛОК:</b>\n\n"
+        for did, d in list(deals.items())[-10:]:
+            t += f"{icons.get(d['status'],'❓')} <code>{did}</code>: @{d['creator_name']} → @{d['second_user']} ({d['amount']} {d['currency']})\n"
+        if len(deals) > 10:
+            t += f"\n<i>...и ещё {len(deals)-10} сделок</i>"
+        edit(chat_id, msg_id, t, kb_admin())
+        return
+
+    if data == "a_top":
+        top_deals = generate_top()
+        t = "<b>🔄 ТОП-15 ОБНОВЛЁН:</b>\n\n"
+        for i, d in enumerate(top_deals[:15], 1):
+            t += f"<b>{i}.</b> {mask(d['user1'])} ↔ {mask(d['user2'])} — {d['amount']} {d['currency']}\n"
+        edit(chat_id, msg_id, t, kb_admin())
+        return
+
+    if data == "a_close":
+        delete(chat_id, msg_id)
+        send(chat_id, settings["banner_text"], kb_main())
+        return
+
+# ===== MAIN LOOP =====
+def main():
+    global top_deals
+
+    print(f"🚀 Bot @{BOT_USERNAME} запущен")
+    print(f"👑 Admin IDs: {ADMIN_IDS}")
+
+    top_deals = generate_top()
+    tg("deleteWebhook", {})
+
+    offset = 0
+    while True:
+        try:
+            r = requests.get(
+                f"https://api.telegram.org/bot{TOKEN}/getUpdates",
+                params={"offset": offset, "timeout": 30},
+                timeout=35,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("ok"):
+                    for upd in data["result"]:
+                        offset = upd["update_id"] + 1
+                        try:
+                            if "message" in upd:
+                                handle_message(upd["message"])
+                            elif "callback_query" in upd:
+                                handle_callback(upd["callback_query"])
+                        except Exception as e:
+                            print(f"[handler error] {e}")
+            time.sleep(0.3)
+        except KeyboardInterrupt:
+            print("❌ Бот остановлен")
+            break
+        except Exception as e:
+            print(f"[loop error] {e}")
+            time.sleep(5)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
